@@ -7,27 +7,23 @@ Created on Wed Nov 25 01:00:07 2020
 
 import os
 import tkinter as tk
+
 from shutil import copy
 
+from tkinter import messagebox
+from tkinter import filedialog
+
+from WhiskyFunctions.change_spreadsheet import change_spreadsheet
 from WhiskyFunctions.addInfoCertificate import addInfoCertificate
 from WhiskyFunctions.addInfoHistory import addInfoHistory
-from WhiskyFunctions.parseData import parseData
 from WhiskyFunctions.parseError import parseError
+from WhiskyFunctions.processConfigString import processConfigString
 from WhiskyFunctions.searchFile import SearchFile
 from WhiskyFunctions.searchFileHistory import SearchFileHistory
-from WhiskyFunctions.processConfigString import processConfigString
+from WhiskyFunctions.create_window import create_window
 
-root = tk.Tk()
+root = create_window("root", "Whisky Ambassador Program")
 
-root.title("Whisky Ambassador Program")
-
-windowWidth = root.winfo_reqwidth()
-windowHeight = root.winfo_reqheight()
-
-positionRight = int(root.winfo_screenwidth() / 2 - windowWidth / 2)
-positionDown = int(root.winfo_screenheight() / 2 - windowHeight / 2)
-
-root.geometry("+{}+{}".format(positionRight, positionDown))
 
 lbl = tk.Label(root, text="Please select from one of the following options")
 lbl.grid(column=1, row=0, pady=20, columnspan=2)
@@ -105,54 +101,11 @@ if not os.path.isdir("Spreadsheet/"):
     tk.messagebox.showinfo(title="Information",
                            message="Existing Databse folder has not been found, one will be created")
 
-
-def changeSpreadsheet():
-    global SpreadSheet, SpreadSheetExists, AwardCertificateTemplate, CertificateTemplateList, SpreadSheetFileExists
-
-    tk.Tk().withdraw()
-    newSpreadSheet = tk.askopenfilename()
-
-    newSpreadSheet = os.path.basename(newSpreadSheet)
-
-    if ".xlsx" not in newSpreadSheet:
-        tk.messagebox.showerror(title="Information",
-                                message="Error, you have not selected a valid spreadsheet file, old spreadsheet file "
-                                        "(if it exists) will not be replaced, make sure you select a spreadsheed file "
-                                        "with the extension '.xlsx'")
-        return
-
-    if SpreadSheetFileExists:
-        os.remove("Spreadsheet/" + SpreadSheet)
-        print("Existing spreadsheet removed")
-
-    with open("config.txt", "w") as f:
-
-        for entry in CertificateTemplateList:
-            f.write("Certificate_template=" + entry)
-            f.write("\n")
-
-        f.write("Spreadsheet=" + newSpreadSheet + "\n")
-
-    newFile = newSpreadSheet.replace("/", '\\')
-
-    dst = os.getcwd()
-
-    dst = dst + "\\Spreadsheet\\"
-
-    copy(newFile, dst)
-
-    SpreadSheet = newSpreadSheet
-
-    SpreadSheetExists = True
-
-    tk.messagebox.showinfo(title="Information", message="Spreadsheet file has been successfully selected and changed!")
-
-
-spreadsheetBtn = tk.Button(root, text="Select Spreadsheet", command=lambda: changeSpreadsheet())
+spreadsheetBtn = tk.Button(root, text="Select Spreadsheet", command=lambda: change_spreadsheet(CertificateTemplateList))
 spreadsheetBtn.grid(column=0, row=4, padx=10, pady=2)
 
 
-def createIndividualSearchWindow():
+def create_individual_search_window():
     global SpreadSheetExists
 
     if not SpreadSheetExists:
@@ -163,49 +116,34 @@ def createIndividualSearchWindow():
 
     root.wm_state('iconic')
 
-    window3 = tk.Toplevel(root)
-    window3.grab_set()
+    window3 = create_window("window3", "Individual Award Search", root)
 
-    window3.title("Individual Award Search")
+    window_3_label = tk.Label(window3, text="Enter the name of the person you want to create the certificate for")
+    window_3_label.grid(column=0, row=0, columnspan=2, padx=15, pady=10)
 
-    windowWidth = window3.winfo_reqwidth()
-    windowHeight = window3.winfo_reqheight()
+    window_3_close_button = tk.Button(window3, text="Close", command=window3.destroy)
+    window_3_close_button.grid(column=2, row=4, padx=5, pady=5)
 
-    positionRight = int(window3.winfo_screenwidth() / 2 - windowWidth / 2)
-    positionDown = int(window3.winfo_screenheight() / 2 - windowHeight / 2)
-
-    window3.geometry("+{}+{}".format(positionRight, positionDown))
-
-    window3.resizable(True, True)
-
-    lbl = tk.Label(window3, text="Enter the name of the person you want to create the certificate for")
-    lbl.grid(column=0, row=0, columnspan=2, padx=15, pady=10)
-
-    closeBtn = tk.Button(window3, text="Close", command=window3.destroy)
-    closeBtn.grid(column=2, row=4, padx=5, pady=5)
-
-    lblFname = tk.Label(window3, text="First Name")
-    lblFname.grid(column=0, row=1, pady=5)
+    window_3_first_name_label = tk.Label(window3, text="First Name")
+    window_3_first_name_label.grid(column=0, row=1, pady=5)
 
     txt = tk.Entry(window3, width=10)
     txt.grid(column=0, row=2, pady=5)
 
-    lblSname = tk.Label(window3, text="Second Name")
-    lblSname.grid(column=1, row=1, pady=5)
+    window_3_second_name_label = tk.Label(window3, text="Second Name")
+    window_3_second_name_label.grid(column=1, row=1, pady=5)
 
     txt2 = tk.Entry(window3, width=10)
     txt2.grid(column=1, row=2, pady=5)
 
-    def createGenerateWindow():
+    def create_generate_window():
 
-        global chosenTemplate, SpreadSheet
+        chosen_template = None
 
-        chosenTemplate = None
+        first_name = txt.get().strip()
+        second_name = txt2.get().strip()
 
-        firstName = txt.get().strip()
-        secondName = txt2.get().strip()
-
-        output = SearchFile(firstName.lower(), secondName.lower(), FileName=SpreadSheet)
+        output = SearchFile(first_name.lower(), second_name.lower(), FileName=SpreadSheet)
 
         if type(output) == int:
             tk.messagebox.showinfo("Error information", parseError(output))
@@ -213,76 +151,47 @@ def createIndividualSearchWindow():
 
             output = output[0]
 
-            Window2 = tk.Toplevel(root)
-            Window2.grab_set()
+            window_2 = create_window("window_2", "Generate Window", root)
 
-            Window2.title("Generate Window")
+            combo2 = tk.Combobox(window_2)
+            new_output = []
 
-            Window2.resizable(True, True)
+            for j in output:
+                new_output.append(str(j[0]) + ", " + str(j[1]) + ", " + str(j[2]) + ", " + str(j[3]))
 
-            windowWidth = Window2.winfo_reqwidth()
-            windowHeight = Window2.winfo_reqheight()
-
-            positionRight = int(Window2.winfo_screenwidth() / 2 - windowWidth / 2)
-            positionDown = int(Window2.winfo_screenheight() / 2 - windowHeight / 2)
-
-            Window2.geometry("+{}+{}".format(positionRight, positionDown))
-
-            Window2.update_idletasks()
-
-            combo2 = tk.Combobox(Window2)
-            newOutput = []
-
-            for i in output:
-                newOutput.append(str(i[0]) + ", " + str(i[1]) + ", " + str(i[2]) + ", " + str(i[3]))
-
-            combo2["values"] = newOutput
+            combo2["values"] = new_output
             combo2["width"] = 60
             combo2.grid(column=1, row=1, pady=10, padx=10)
 
-            lbl2 = tk.Label(Window2, text="Please choose from one of the options below")
+            lbl2 = tk.Label(window_2, text="Please choose from one of the options below")
             lbl2.grid(column=1, row=0, padx=10, pady=10)
 
             def generate():
 
-                if os.path.isdir("Output/") == False:  # Checks if output directory exists, if not then it creates it
+                if not os.path.isdir("Output/"):  # Checks if output directory exists, if not then it creates it
                     os.makedirs("Output/")
                     tk.messagebox.showinfo(title="Information",
                                            message="Existing Output folder has not been found, one will be created")
 
-                if chosenTemplate != None:
+                if chosen_template is not None:
 
-                    requestedItem = combo2.get()
-                    lbl2.configure(text=requestedItem)
+                    requested_item = combo2.get()
+                    lbl2.configure(text=requested_item)
 
-                    message = addInfoCertificate(requestedItem, chosenTemplate)
+                    message = addInfoCertificate(requested_item, chosen_template)
                     tk.messagebox.showinfo("Whiskey Ambassador", message)
 
                 else:
                     tk.messagebox.showerror(title="Error",
-                                            message="Error, no template has been selected for certificate generation, please click the 'Templates' button to select one")
+                                            message="Error, no template has been selected for certificate generation, "
+                                                    "please click the 'Templates' button to select one")
 
-            btn2 = tk.Button(Window2, text="Generate", command=lambda: generate())
+            btn2 = tk.Button(window_2, text="Generate", command=lambda: generate())
             btn2.grid(column=1, row=2, pady=10)
 
             def templates():
 
-                Window4 = tk.Toplevel(root)
-                Window4.grab_set()
-
-                Window4.title("Template Window")
-
-                Window4.resizable(True, True)
-
-                windowWidth = Window4.winfo_reqwidth()
-                windowHeight = Window4.winfo_reqheight()
-
-                positionRight = int(Window2.winfo_screenwidth() / 2 - windowWidth / 2)
-                positionDown = int(Window2.winfo_screenheight() / 2 - windowHeight / 2)
-
-                Window4.geometry("+{}+{}".format(positionRight, positionDown))
-
-                Window4.update_idletasks()
+                Window4 = create_window("Window4", "Template Window", root)
 
                 lbl1 = tk.Label(Window4, text="Please select a template to use or delete by using the selector box")
                 lbl1.grid(column=1, row=0, padx=10, pady=10)
@@ -297,8 +206,6 @@ def createIndividualSearchWindow():
                 TemplatesCombo.grid(column=1, row=1, pady=10, padx=10)
 
                 def selectTemplate():
-
-                    global chosenTemplate
 
                     requestedItem = TemplatesCombo.get()
                     chosenTemplate = requestedItem
@@ -360,22 +267,7 @@ def createIndividualSearchWindow():
 
                     validFile = None
 
-                    newTemplateWindow = tk.Toplevel(root)
-                    newTemplateWindow.grab_set()
-
-                    newTemplateWindow.title("Template Window")
-
-                    newTemplateWindow.resizable(True, True)
-
-                    windowWidth = newTemplateWindow.winfo_reqwidth()
-                    windowHeight = newTemplateWindow.winfo_reqheight()
-
-                    positionRight = int(newTemplateWindow.winfo_screenwidth() / 2 - windowWidth / 2)
-                    positionDown = int(newTemplateWindow.winfo_screenheight() / 2 - windowHeight / 2)
-
-                    newTemplateWindow.geometry("+{}+{}".format(positionRight, positionDown))
-
-                    newTemplateWindow.update_idletasks()
+                    newTemplateWindow = create_window("newTemplateWindow", "Template Window", root)
 
                     lbl1 = tk.Label(newTemplateWindow, text="Create a new template")
                     lbl1.grid(column=1, row=0, padx=10, pady=10, columnspan=2)
@@ -467,13 +359,13 @@ def createIndividualSearchWindow():
                     tk.messagebox.showinfo(title="Information",
                                            message="No existing templates were found in the config file, you can add a new template by clicking the add button")
 
-            btn3 = tk.Button(Window2, text="Templates", command=lambda: templates())
+            btn3 = tk.Button(window_2, text="Templates", command=lambda: templates())
             btn3.grid(column=0, row=4, pady=5, padx=5)
 
-            closeBtn2 = tk.Button(Window2, text="Close", command=Window2.destroy)
+            closeBtn2 = tk.Button(window_2, text="Close", command=window_2.destroy)
             closeBtn2.grid(column=2, row=4, pady=5, padx=5)
 
-    btn = tk.Button(window3, text="Search", command=createGenerateWindow)
+    btn = tk.Button(window3, text="Search", command=create_generate_window)
     btn.grid(column=0, row=3, columnspan=2)
 
 
@@ -487,20 +379,7 @@ def createAwardHistoryWindow():
 
     root.wm_state('iconic')
 
-    AwardHistoryWindow = tk.Toplevel(root)
-    AwardHistoryWindow.grab_set()
-
-    AwardHistoryWindow.title("Award History Search")
-
-    windowWidth = AwardHistoryWindow.winfo_reqwidth()
-    windowHeight = AwardHistoryWindow.winfo_reqheight()
-
-    positionRight = int(AwardHistoryWindow.winfo_screenwidth() / 2 - windowWidth / 2)
-    positionDown = int(AwardHistoryWindow.winfo_screenheight() / 2 - windowHeight / 2)
-
-    AwardHistoryWindow.geometry("+{}+{}".format(positionRight, positionDown))
-
-    AwardHistoryWindow.resizable(True, True)
+    AwardHistoryWindow = create_window("AwardHistoryWindow", "Award History Search", root)
 
     lbl = tk.Label(AwardHistoryWindow, text="Enter the name of the person you want to create the certificate for")
     lbl.grid(column=0, row=0, columnspan=2, padx=15, pady=10)
@@ -538,22 +417,7 @@ def createAwardHistoryWindow():
 
             output = output[0]
 
-            SearchWindow = tk.Toplevel(root)
-            SearchWindow.grab_set()
-
-            SearchWindow.title("Generate Window")
-
-            SearchWindow.resizable(True, True)
-
-            windowWidth = SearchWindow.winfo_reqwidth()
-            windowHeight = SearchWindow.winfo_reqheight()
-
-            positionRight = int(SearchWindow.winfo_screenwidth() / 2 - windowWidth / 2)
-            positionDown = int(SearchWindow.winfo_screenheight() / 2 - windowHeight / 2)
-
-            SearchWindow.geometry("+{}+{}".format(positionRight, positionDown))
-
-            SearchWindow.update_idletasks()
+            SearchWindow = create_window("SearchWindow", "Generate Window", root)
 
             combo2 = tk.Combobox(SearchWindow)
             newOutput = []
@@ -671,7 +535,7 @@ def createAwardHistoryWindow():
 btn1 = tk.Button(root, text="Start", command=createAwardHistoryWindow)
 btn1.grid(column=1, row=2)
 
-btn2 = tk.Button(root, text="Start", command=createIndividualSearchWindow)
+btn2 = tk.Button(root, text="Start", command=create_individual_search_window)
 btn2.grid(column=2, row=2)
 
 root.mainloop()
